@@ -7,7 +7,6 @@ import os
 from github import Github
 import requests
 import sqlite3
-import re
 import ast
 
 # Fetches the current state of repositories (owner, name, branch, commit hash).
@@ -44,6 +43,27 @@ def load_previous_state(db_path):
 def convert_commits(paginated_commits):
     return [{"name": commit.commit.message.split('\n')[0], "link": commit.html_url, "sha": commit.sha} for commit in paginated_commits]
 
+def find_base_branch(repo, new_branch_name):
+    """
+    Find a suitable base branch for the new branch.
+
+    Parameters:
+    repo: The repository object.
+    new_branch_name: The name of the new branch.
+
+    Returns:
+    The name of the base branch or the default branch if none is found.
+    """
+    branches = repo.get_branches()
+    for branch in branches:
+        if branch.name == new_branch_name:
+            continue
+        comparison = repo.compare(branch.name, new_branch_name)
+        if comparison.behind_by == 0:
+            return branch.name
+    return repo.default_branch
+
+
 # Compares the current and previous states of branches to identify changes.
 def compare_states(current_state, previous_state, github_client):
     new_branches = []
@@ -55,15 +75,15 @@ def compare_states(current_state, previous_state, github_client):
     for current_branch in current_state:
         repo_full_name = f"{current_branch['repo_owner']}/{current_branch['repo_name']}"
         repo = github_client.get_repo(repo_full_name)
-        
+    
         previous_branch = next((b for b in previous_state 
                                 if b["repo_owner"] == current_branch["repo_owner"] 
                                 and b["repo_name"] == current_branch["repo_name"] 
                                 and b["branch_name"] == current_branch["branch_name"]), None)
         
         if previous_branch is None:
-            default_branch = repo.default_branch
-            comparison = repo.compare(default_branch, current_branch["branch_name"])
+            base_branch = find_base_branch(repo, current_branch["branch_name"])
+            comparison = repo.compare(base_branch, current_branch["branch_name"])
             if comparison.commits:
                 new_branches.append({
                     "repo_owner": current_branch["repo_owner"],
@@ -110,10 +130,6 @@ def find_merged_commits_without_pr(main_repo_name, current_state, previous_state
 
     repo = github_client.get_repo(main_repo_name)
     main_branch_name = repo.default_branch
-
-    current_main_branch = next((b for b in current_state if b["repo_owner"] == main_repo_name.split('/')[0] and 
-                                b["repo_name"] == main_repo_name.split('/')[1] and 
-                                b["branch_name"] == main_branch_name), None)
 
     previous_main_branch = next((b for b in previous_state if b["repo_owner"] == main_repo_name.split('/')[0] and 
                                  b["repo_name"] == main_repo_name.split('/')[1] and 
