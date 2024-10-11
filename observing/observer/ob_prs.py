@@ -25,7 +25,7 @@ def fetch_pr_details(repo, pr_number):
         'commits': commit_details
     }
 
-def format_report_prs(merged_prs, unmerged_prs, open_prs, repo):
+def format_report_prs(merged_prs, unmerged_prs, open_prs, reopen_prs, repo):
     fields = []
 
     if merged_prs:
@@ -37,13 +37,14 @@ def format_report_prs(merged_prs, unmerged_prs, open_prs, repo):
         for pr_number in merged_prs:
             pr_details = fetch_pr_details(repo, pr_number)
             if pr_details:
-                merged_field["value"] += f"\n- [{pr_details['title']}]({pr_details['url']}) by [{pr_details['author']}](https://github.com/{pr_details['author']})\n"
+                merged_field["value"] += f"\nΔ [{pr_details['title']}]({pr_details['url']}) by [{pr_details['author']}](https://github.com/{pr_details['author']})\n"
                 merged_field["value"] += "  Commits:\n"
                 for i, commit in enumerate(pr_details["commits"]):
                     if i:
                         merged_field["value"] += f"\n * [{commit['name']}]({commit['link']})"
                     else: 
                         merged_field["value"] += f" * [{commit['name']}]({commit['link']})"
+                merged_field["value"] += "\n"                        
         fields.append(merged_field)
 
     if unmerged_prs:
@@ -55,13 +56,14 @@ def format_report_prs(merged_prs, unmerged_prs, open_prs, repo):
         for pr_number in unmerged_prs:
             pr_details = fetch_pr_details(repo, pr_number)
             if pr_details:
-                unmerged_field["value"] += f"\n- [{pr_details['title']}]({pr_details['url']}) by [{pr_details['author']}](https://github.com/{pr_details['author']})\n"
+                unmerged_field["value"] += f"\nΔ [{pr_details['title']}]({pr_details['url']}) by [{pr_details['author']}](https://github.com/{pr_details['author']})\n"
                 unmerged_field["value"] += "  Commits:\n"
                 for i, commit in enumerate(pr_details["commits"]):
                     if i:
                         unmerged_field["value"] += f"\n * [{commit['name']}]({commit['link']})"
                     else: 
                         unmerged_field["value"] += f" * [{commit['name']}]({commit['link']})"
+                unmerged_field["value"] += "\n"                          
         fields.append(unmerged_field)
 
     if open_prs:
@@ -73,14 +75,34 @@ def format_report_prs(merged_prs, unmerged_prs, open_prs, repo):
         for pr_number in open_prs:
             pr_details = fetch_pr_details(repo, pr_number)
             if pr_details:
-                open_field["value"] += f"\n- [{pr_details['title']}]({pr_details['url']}) by [{pr_details['author']}](https://github.com/{pr_details['author']})\n"
+                open_field["value"] += f"\nΔ [{pr_details['title']}]({pr_details['url']}) by [{pr_details['author']}](https://github.com/{pr_details['author']})\n"
                 open_field["value"] += "  Commits:\n"
                 for i, commit in enumerate(pr_details["commits"]):
                     if i:
                         open_field["value"] += f"\n * [{commit['name']}]({commit['link']})"
                     else: 
                         open_field["value"] += f" * [{commit['name']}]({commit['link']})"
+                merged_field["value"] += "\n"  
         fields.append(open_field)
+
+    if reopen_prs:
+        reopen_field = {
+            "name": "\n\n🚪 **Reopened Pull Requests** 🚪\n\n",
+            "value": "",
+            "inline": False
+        }
+        for pr_number in reopen_prs:
+            pr_details = fetch_pr_details(repo, pr_number)
+            if pr_details:
+                reopen_field["value"] += f"\nΔ [{pr_details['title']}]({pr_details['url']}) by [{pr_details['author']}](https://github.com/{pr_details['author']})\n"
+                reopen_field["value"] += "  Commits:\n"
+                for i, commit in enumerate(pr_details["commits"]):
+                    if i:
+                        reopen_field["value"] += f"\n * [{commit['name']}]({commit['link']})"
+                    else: 
+                        reopen_field["value"] += f" * [{commit['name']}]({commit['link']})"
+                reopen_field["value"] += "\n"
+        fields.append(reopen_field)
 
     embed = {
         "title": "🚀 __ PULL REQUEST REPORT __ 🚀",
@@ -96,11 +118,36 @@ def find_open_merged_pr(previous_state, current_state, main_repo):
     merged_prs = []
     unmerged_prs = []
     open_prs = []
-
+    reopen_prs = []
+    
     # Extract previous and current PR states
     prev_prs = previous_state['prs']
     curr_prs = current_state['prs']
 
+    # for pr_number, curr_state in curr_prs.items():
+    #     if pr_number not in prev_prs:
+    #         if curr_state == 'open':
+    #             open_prs.append(pr_number)
+    #         elif curr_state == 'closed':
+    #             # Check if the PR is merged
+    #             pr = main_repo.get_pull(pr_number)
+    #             if pr.merged:
+    #                 merged_prs.append(pr_number)
+    #             else:
+    #                 unmerged_prs.append(pr_number)
+
+    # # Check existing PRs for state changes
+    # for pr_number, prev_state in prev_prs.items():
+    #     curr_state = curr_prs.get(pr_number)
+        
+    #     if curr_state and prev_state == 'open' and curr_state == 'closed':
+    #         # Check if the PR is merged
+    #         pr = main_repo.get_pull(pr_number)
+    #         if pr.merged:
+    #             merged_prs.append(pr_number)
+    #         else:
+    #             unmerged_prs.append(pr_number)
+    # report_prs = format_report_prs(merged_prs, unmerged_prs, open_prs, main_repo)
     for pr_number, curr_state in curr_prs.items():
         if pr_number not in prev_prs:
             if curr_state == 'open':
@@ -112,19 +159,19 @@ def find_open_merged_pr(previous_state, current_state, main_repo):
                     merged_prs.append(pr_number)
                 else:
                     unmerged_prs.append(pr_number)
-
-    # Check existing PRs for state changes
-    for pr_number, prev_state in prev_prs.items():
-        curr_state = curr_prs.get(pr_number)
-        
-        if curr_state and prev_state == 'open' and curr_state == 'closed':
-            # Check if the PR is merged
-            pr = main_repo.get_pull(pr_number)
-            if pr.merged:
-                merged_prs.append(pr_number)
-            else:
-                unmerged_prs.append(pr_number)
-    report_prs = format_report_prs(merged_prs, unmerged_prs, open_prs, main_repo)
+        elif pr_number in prev_prs:
+            if curr_state == 'open':
+                if prev_prs[pr_number] == 'closed':
+                    reopen_prs.append(pr_number)
+            elif curr_state == 'closed':
+                if prev_prs[pr_number] == 'open':
+                    pr = main_repo.get_pull(pr_number)
+                    if pr.merged:
+                        merged_prs.append(pr_number)
+                    else:
+                        unmerged_prs.append(pr_number)
+                        
+    report_prs = format_report_prs(merged_prs, unmerged_prs, open_prs, reopen_prs, main_repo)
 
     return report_prs
     

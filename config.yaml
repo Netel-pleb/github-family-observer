@@ -1,0 +1,15 @@
+# Example of config.yaml file
+
+# Path to the folder where repository database files are stored
+DATABASE_DIR: "db"
+
+# GitHub repository to monitor (use the full repository name in the format 'owner/repo')
+MAIN_REPO: "nesta-onur111/git-rebased-commit"
+
+# List of fork repositories to monitor (in the format 'owner/repo')
+FORKS:
+  - "eros-rama2/git-rebased-commit"
+
+
+# Discord webhook URL where reports will be posted
+DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/1293736091182039080/ieVJMz9olC2OPXHb9Ng0nP315Wc8P3Ovf-UfoojicB1HmAUIczhaqP_GdQ_L647LpGlW"
