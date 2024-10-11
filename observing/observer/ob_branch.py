@@ -9,32 +9,6 @@ import requests
 import sqlite3
 import re
 import ast
-# Wraps URLs in angle brackets to prevent Discord from auto-linking them.
-def wrap_urls_with_angle_brackets(text):
-    url_pattern = r'(https?://\S+)'
-    parts = text.split('\n')
-    wrapped_parts = [re.sub(url_pattern, r'<\1>', part.strip()) for part in parts]
-    return '\n'.join(wrapped_parts)
-
-# Splits a report into chunks that fit within Discord's message limit.
-def chunk_report(report):
-    DISCORD_MESSAGE_LIMIT = 2000
-    report = wrap_urls_with_angle_brackets(report)
-    chunks = []
-    lines = report.split('\n')
-    current_chunk = ""
-
-    for line in lines:
-        if len(current_chunk) + len(line) + 1 > DISCORD_MESSAGE_LIMIT:
-            chunks.append(current_chunk)
-            current_chunk = line
-        else:
-            current_chunk += "\n" + line if current_chunk else line
-
-    if current_chunk:
-        chunks.append(current_chunk)
-    
-    return chunks
 
 # Fetches the current state of repositories (owner, name, branch, commit hash).
 def fetch_current_repo_state(repo_family, github_client):
